@@ -1,0 +1,183 @@
+---
+import '../styles/global.css';
+const topics = [
+  ['overview','Vue d’ensemble'],['convexity','Convexité & KKT'],['pmp','Pontryagin'],['transversality','Transversalité'],['lqr','LQR & Riccati'],['mpc','MPC'],['dmc','MAC / DMC / QDMC'],['gpc','GPC'],['linear-mpc','MPC état-espace'],['nmpc','NMPC direct'],['shooting','Shooting & collocation'],['flashcards','Flashcards'],['quiz','Quiz']
+];
+const flashcards = [
+  ['PMP','Quel est le rôle de λ(t) ?','C’est la variable adjointe. Elle impose la dynamique comme contrainte et suit λ̇ = −∂H/∂x.'],
+  ['Hamiltonien','Condition sur u sans contrainte ?','L’entrée optimale vérifie ∂H/∂u = 0. Avec contraintes, elle minimise H sur le domaine admissible U.'],
+  ['LQR','Pourquoi λ(k)=P(k)x(k) ?','Cette transformation élimine le problème aux deux bords et conduit à la récurrence de Riccati.'],
+  ['MPC','Pourquoi “receding horizon” ?','On optimise une séquence future, on applique seulement le premier mouvement, puis on ré-optimise au pas suivant.'],
+  ['DMC','Réponse forcée vs libre ?','La réponse forcée vient des futurs Δu optimisés. La réponse libre contient l’effet du passé et la correction de perturbation.'],
+  ['QDMC','Pourquoi ne pas simplement saturer le DMC ?','Le clipping peut casser l’optimalité. QDMC met directement les contraintes dans le problème quadratique.'],
+  ['GPC','Quel modèle utilise GPC ?','Une représentation CARIMA, où Δu apparaît explicitement et où les perturbations intégrées sont prises en compte.'],
+  ['Single shooting','Quelles variables sont optimisées ?','Principalement les paramètres de commande; les états sont reconstruits par intégration de l’ODE.'],
+  ['Multiple shooting','Différence essentielle ?','On optimise aussi les états initiaux de plusieurs segments et on impose des contraintes de continuité entre segments.']
+];
+---
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width" />
+  <meta name="theme-color" content="#071018" />
+  <meta name="description" content="Site de révision Optimal Control et MPC" />
+  <title>Optimal Control — Révision</title>
+  <script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]']]},svg:{fontCache:'global'}};</script>
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="brandmark">OC</div><div><h1>Optimal Control</h1><p>Fiche interactive de révision</p></div></div>
+    <input id="search" class="search" placeholder="Rechercher un concept…" aria-label="Rechercher" />
+    <div class="nav-title">Chapitres</div>
+    <nav class="nav">{topics.map(([id,label]) => <a href={`#${id}`} data-nav={id}>{label}</a>)}</nav>
+    <div class="progress-wrap"><div class="progress-head"><span>Progression</span><span id="progressText">0%</span></div><div class="progress"><span id="progressBar"></span></div></div>
+  </aside>
+  <main>
+    <header class="hero">
+      <div class="eyebrow">FPMs · Optimal Control 2026</div>
+      <h2>Réviser le cours en comprenant la logique, pas en récitant les slides.</h2>
+      <p>Le site suit les deux parties du cours: contrôle optimal / LQR puis contrôle prédictif. Les cartes condensent les développements des notes manuscrites et des slides, avec les équations à reconnaître à l’examen.</p>
+      <div class="hero-grid"><div class="stat"><strong>2</strong><span>grands blocs de cours</span></div><div class="stat"><strong>13</strong><span>chapitres navigables</span></div><div class="stat"><strong>9</strong><span>flashcards ciblées</span></div><div class="stat"><strong>8</strong><span>questions de contrôle</span></div></div>
+    </header>
+    <div class="content">
+      <section id="overview" class="section searchable">
+        <div class="section-title"><div class="num">01</div><div><h3>Carte mentale du cours</h3><p>Le fil conducteur à garder en tête.</p></div></div>
+        <div class="grid three">
+          <article class="card"><h4>Contrôle optimal</h4><p>Choisir une trajectoire de commande qui minimise un critère tout en respectant la dynamique.</p><div class="formula">\[\dot x=f(x,u),\qquad J=g(x(t_f))+\int_{t_0}^{t_f}h(x,u,t)\,dt\]</div></article>
+          <article class="card"><h4>Pontryagin → LQR</h4><p>On impose la dynamique par multiplicateurs, on introduit l’Hamiltonien, puis le cas linéaire-quadratique mène à Riccati et à un feedback d’état.</p><div class="flow"><span class="node">PMP</span><span class="arrow">→</span><span class="node">Hamiltonien</span><span class="arrow">→</span><span class="node">Riccati</span></div></article>
+          <article class="card"><h4>MPC</h4><p>On résout un problème optimal à chaque échantillon, mais on n’applique que le premier mouvement de commande.</p><div class="flow"><span class="node">Mesure</span><span class="arrow">→</span><span class="node">Prédiction</span><span class="arrow">→</span><span class="node">Optimisation</span><span class="arrow">→</span><span class="node">u(k)</span></div></article>
+        </div>
+      </section>
+
+      <section id="convexity" class="section searchable">
+        <div class="section-title"><div class="num">02</div><div><h3>Convexité, Lagrange et KKT</h3><p>Les outils statiques utilisés avant le contrôle optimal dynamique.</p></div></div>
+        <div class="grid">
+          <article class="card"><h4>Hiérarchie des fonctions</h4><div class="formula">\[\text{convexe}\Rightarrow\text{pseudoconvexe}\Rightarrow\text{quasiconvexe}\]</div><p>L’inverse n’est pas vrai. Pour une fonction convexe différentiable sans contrainte, le point stationnaire est un minimum global.</p><div class="formula">\[\nabla J(x^*)=0\]</div></article>
+          <article class="card"><h4>Lagrangien</h4><p>Pour une contrainte d’égalité, on augmente le coût:</p><div class="formula">\[J_A(x,\lambda)=J(x)+\lambda^T g(x)\]</div><p>Le multiplicateur est interprété comme un <em>shadow price</em>: sensibilité de l’optimum à une relaxation marginale de la contrainte.</p></article>
+          <article class="card"><h4>KKT — ce qu’il faut reconnaître</h4><div class="formula small">\[\nabla J+\sum_i \mu_i\nabla f_i+\sum_j\nu_j\nabla g_j=0,\quad \mu_i\ge0,\quad f_i\le0,\quad \mu_i f_i=0\]</div><p>Stationnarité, faisabilité primale, faisabilité duale et complémentarité.</p></article>
+          <article class="card"><h4>Intuition géométrique</h4><p>À l’optimum sous contrainte, le gradient du coût est une combinaison des normales aux contraintes actives. Pour une seule égalité, les tangentes au niveau de coût et à la contrainte coïncident.</p></article>
+        </div>
+      </section>
+
+      <section id="pmp" class="section searchable">
+        <div class="section-title"><div class="num">03</div><div><h3>Principe du Minimum de Pontryagin</h3><p>Le noyau analytique du cours.</p></div></div>
+        <div class="grid">
+          <article class="card"><h4>1. Hamiltonien</h4><div class="formula">\[H(x,u,\lambda,t)=h(x,u,t)+\lambda^T f(x,u,t)\]</div><p>On peut voir λ comme le multiplicateur de Lagrange associé à la contrainte différentielle.</p></article>
+          <article class="card"><h4>2. Trois équations à savoir</h4><div class="formula small">\[\dot x=\frac{\partial H}{\partial \lambda}=f(x,u),\qquad \dot\lambda=-\frac{\partial H}{\partial x},\qquad u^*=\arg\min_{u\in U}H\]</div><p>Sans borne active et pour un optimum intérieur: \(\partial H/\partial u=0\).</p></article>
+          <article class="card"><h4>3. Système autonome</h4><p>Si le système ne dépend pas explicitement du temps,</p><div class="formula">\[\frac{dH}{dt}=\frac{\partial H}{\partial t}=0\]</div><p>Donc H est constant le long de la trajectoire optimale.</p></article>
+          <article class="card"><h4>4. Commande bornée</h4><p>La solution ne doit pas nécessairement être stationnaire. Elle doit seulement minimiser H sur U. Pour un Hamiltonien affine en u et des bornes symétriques, on obtient du bang-bang.</p><div class="formula">\[u_j^*=-\operatorname{sign}(\lambda_j)u_{\max,j}\]</div></article>
+        </div>
+        <div class="callout"><strong>Erreur fréquente:</strong> écrire systématiquement \(\partial H/\partial u=0\). Cette condition ne vaut que si l’optimum est à l’intérieur du domaine admissible.</div>
+      </section>
+
+      <section id="transversality" class="section searchable">
+        <div class="section-title"><div class="num">04</div><div><h3>Conditions de transversalité</h3><p>Ce qui remplace les conditions finales lorsqu’un état ou le temps final est libre.</p></div></div>
+        <div class="grid">
+          <article class="card"><h4>État final libre / surface cible</h4><p>Pour une contrainte terminale \(\psi(x_f)=0\) et un coût terminal g:</p><div class="formula small">\[\lambda^T(t_f)=\left.\frac{\partial g}{\partial x}+\alpha^T\frac{\partial \psi}{\partial x}\right|_{t_f}\]</div><p>Si \(g=0\), λ au temps final est normal à la surface cible.</p></article>
+          <article class="card"><h4>Temps final libre</h4><p>Si le coût terminal et la cible ne dépendent pas explicitement du temps, la condition mène à:</p><div class="formula">\[H(t_f)=0\]</div><p>Et pour un système autonome, H est alors nul sur toute la trajectoire optimale.</p></article>
+        </div>
+      </section>
+
+      <section id="lqr" class="section searchable">
+        <div class="section-title"><div class="num">05</div><div><h3>LQR et équation de Riccati</h3><p>Le cas où l’optimal open-loop se transforme en feedback d’état.</p></div></div>
+        <div class="grid">
+          <article class="card"><h4>Problème discret</h4><div class="formula small">\[x_{k+1}=Ax_k+Bu_k\]\[J=\tfrac12x_N^TFx_N+\tfrac12\sum_{k=0}^{N-1}(x_k^TQx_k+u_k^TRu_k)\]</div><p>Avec \(Q\succeq0\), \(F\succeq0\), \(R\succ0\).</p></article>
+          <article class="card"><h4>Récurrences issues du Lagrangien</h4><div class="formula small">\[\lambda_k=Qx_k+A^T\lambda_{k+1}\]\[Ru_k+B^T\lambda_{k+1}=0\]</div><p>Le problème est un problème aux deux bords: x est connu au début et λ via F à la fin.</p></article>
+          <article class="card"><h4>Transformation clé</h4><div class="formula">\[\lambda_k=P_kx_k\]</div><p>Elle convertit le problème aux deux bords en une récurrence arrière sur P.</p></article>
+          <article class="card"><h4>Riccati + gain</h4><div class="formula small">\[P_k=Q+A^TP_{k+1}A-A^TP_{k+1}B(R+B^TP_{k+1}B)^{-1}B^TP_{k+1}A\]\[K_k=(R+B^TP_{k+1}B)^{-1}B^TP_{k+1}A,\qquad u_k=-K_kx_k\]</div><p>Condition finale: \(P_N=F\).</p></article>
+        </div>
+        <div class="callout"><strong>À l’horizon infini:</strong> si P converge, on résout l’équation de Riccati algébrique. Le gain devient constant.</div>
+      </section>
+
+      <section id="mpc" class="section searchable">
+        <div class="section-title"><div class="num">06</div><div><h3>Principe du Model Predictive Control</h3><p>Optimisation répétée avec horizon glissant.</p></div></div>
+        <div class="grid three"><article class="card"><h4>Étape 1 — prédire</h4><p>À l’instant k, on part de l’état mesuré/estimé et on prédit le futur sur un horizon \(H_p\).</p></article><article class="card"><h4>Étape 2 — optimiser</h4><p>On calcule la séquence future qui minimise le coût tout en respectant les contraintes.</p></article><article class="card"><h4>Étape 3 — reculer l’horizon</h4><p>On applique uniquement le premier mouvement, puis au pas suivant on remesure et on recommence.</p></article></div>
+        <div class="callout"><strong>Pourquoi cela ferme la boucle:</strong> même si chaque sous-problème est open-loop, l’optimisation est recalculée à partir de la nouvelle mesure à chaque pas.</div>
+        <table class="compare"><thead><tr><th></th><th>MPC linéaire</th><th>NMPC</th></tr></thead><tbody><tr><td>Modèle</td><td>Linéaire</td><td>Non linéaire</td></tr><tr><td>Coût typique</td><td>Quadratique</td><td>Arbitraire</td></tr><tr><td>Contraintes</td><td>Linéaires</td><td>Non linéaires possibles</td></tr><tr><td>Optimisation</td><td>QP</td><td>NLP</td></tr></tbody></table>
+      </section>
+
+      <section id="dmc" class="section searchable">
+        <div class="section-title"><div class="num">07</div><div><h3>MAC, DMC et QDMC</h3><p>Les ancêtres industriels qui introduisent déjà les idées MPC.</p></div></div>
+        <div class="grid">
+          <article class="card"><h4>MAC</h4><p>Prédicteur basé sur une réponse impulsionnelle tronquée. Une trajectoire de référence lissée est construite, puis on corrige la prédiction par l’écart mesure-modèle.</p><div class="formula">\[\hat y_{t+k}=\sum_{i=1}^{N}h_i u_{t+k-i}\]</div></article>
+          <article class="card"><h4>DMC</h4><p>Utilise la réponse indicielle et les incréments \(\Delta u\).</p><div class="formula">\[\hat y^c=S_f\Delta u_f+\underbrace{S_p\Delta u_p+s_Nu_p+d_f}_{\text{réponse libre}}\]</div><p>Le premier terme est la réponse forcée, optimisable.</p></article>
+          <article class="card"><h4>Coût DMC</h4><div class="formula small">\[J=e_c^Te_c+\Delta u_f^T\Lambda\Delta u_f\]\[\Delta u_f^*=(S_f^TS_f+\Lambda)^{-1}S_f^Te\]</div><p>λ limite l’activité de la commande et évite une inversion de modèle trop agressive.</p></article>
+          <article class="card"><h4>QDMC</h4><p>Quand les entrées, variations ou sorties sont contraintes, il faut conserver l’optimisation avec contraintes au lieu de saturer après coup.</p><div class="formula small">\[\min_{\Delta u}\;\tfrac12\Delta u^TH\Delta u-c^T\Delta u\quad\text{s.c.}\quad A\Delta u\le b\]</div><span class="tag orange">Interior point</span><span class="tag orange">Active set</span></article>
+        </div>
+      </section>
+
+      <section id="gpc" class="section searchable">
+        <div class="section-title"><div class="num">08</div><div><h3>Generalized Predictive Control</h3><p>Prédiction à partir d’un modèle CARIMA.</p></div></div>
+        <div class="grid">
+          <article class="card"><h4>CARIMA</h4><div class="formula small">\[A(q^{-1})y(t)=B(q^{-1})u(t-1)+\frac{C(q^{-1})}{\Delta(q^{-1})}\xi(t)\]\[\Delta(q^{-1})=1-q^{-1}\]</div><p>Le modèle incorpore naturellement des perturbations non stationnaires de type échelon aléatoire.</p></article>
+          <article class="card"><h4>Prédiction j pas</h4><p>Grâce à des équations diophantiennes, la prédiction se décompose encore en libre + forcée.</p><div class="formula small">\[\hat y(t+j)=\frac{F_j}{C}y(t)+\frac{H_j}{C}\Delta u(t-1)+G_j\Delta u(t+j-1)\]</div></article>
+          <article class="card"><h4>Réglages donnés au cours</h4><ul><li>\(N_1T_s\): délai système</li><li>\(N_2T_s\): ordre de grandeur du temps de réponse</li><li>\(N_u=1\): choix simple</li><li>\(\lambda\): poids sur l’effort de commande</li></ul></article>
+          <article class="card"><h4>Pourquoi GPC est intéressant</h4><p>Il peut traiter des systèmes non minimum-phase et instables en boucle ouverte. La loi linéaire peut être réécrite sous forme RST pour analyser la stabilité.</p></article>
+        </div>
+      </section>
+
+      <section id="linear-mpc" class="section searchable">
+        <div class="section-title"><div class="num">09</div><div><h3>MPC linéaire état-espace</h3><p>LQR + contraintes + horizon glissant.</p></div></div>
+        <div class="grid">
+          <article class="card"><h4>Problème d’optimisation</h4><div class="formula small">\[U_k^*=\arg\min J(\hat x_k,U_k)\]\[\hat x_{k+i+1}=A\hat x_{k+i}+Bu_{k+i}\]</div><p>On impose des ensembles admissibles sur états, entrées et état terminal.</p></article>
+          <article class="card"><h4>Lifted dynamics</h4><div class="formula">\[X_k=\mathcal A x_k+\mathcal B U_k\]</div><p>Cette écriture empile toutes les prédictions et transforme le problème en QP matriciel.</p></article>
+          <article class="card"><h4>Faisabilité récursive</h4><p>Si l’ensemble terminal est invariant par commande, une solution faisable au pas k permet de construire une solution faisable au pas k+1 en décalant la séquence.</p></article>
+          <article class="card"><h4>Stabilité</h4><p>Le coût optimal peut jouer le rôle de Lyapunov. Le cours choisit le poids terminal et le feedback terminal via l’équation de Riccati discrète.</p><div class="formula small">\[Q+K^TRK-Q_f+(A+BK)^TQ_f(A+BK)=0\]</div></article>
+        </div>
+      </section>
+
+      <section id="nmpc" class="section searchable">
+        <div class="section-title"><div class="num">10</div><div><h3>Nonlinear MPC</h3><p>Quand le modèle, le coût ou les contraintes sont non linéaires.</p></div></div>
+        <div class="grid"><article class="card"><h4>Forme générale</h4><div class="formula small">\[\dot x=f(x,u),\quad J=g(x(T))+\int_0^T h(x,u)dt\]\[p(x,u)\ge0,\qquad r(x(T))\ge0\]</div><p>Le problème peut être traité indirectement par PMP ou directement en le convertissant en NLP.</p></article><article class="card"><h4>Pourquoi les méthodes directes</h4><p>Les contraintes de chemin sont difficiles à gérer avec PMP. La transcription directe les transforme en contraintes algébriques explicites pour l’optimiseur.</p></article></div>
+      </section>
+
+      <section id="shooting" class="section searchable">
+        <div class="section-title"><div class="num">11</div><div><h3>Single shooting, multiple shooting, collocation</h3><p>Les trois familles présentées pour résoudre le NMPC.</p></div></div>
+        <table class="compare"><thead><tr><th>Méthode</th><th>Variables</th><th>Dynamique</th><th>Forces</th><th>Limites</th></tr></thead><tbody><tr><td><strong>Single shooting</strong></td><td>Paramètres de commande</td><td>Une intégration ODE sur tout l’horizon</td><td>Simple, bons solveurs ODE/DAE</td><td>Sensible aux systèmes instables; contraintes de chemin moins pratiques</td></tr><tr><td><strong>Multiple shooting</strong></td><td>Commandes + états initiaux des segments</td><td>Intégrations indépendantes par segment + continuité</td><td>Bon pour instable et contraintes de chemin</td><td>NLP plus gros</td></tr><tr><td><strong>Collocation</strong></td><td>États et commandes aux points de collocation</td><td>Pas d’intégrateur ODE séparé; polynômes/éléments finis</td><td>Structure creuse, grand-échelle</td><td>Besoin de dérivées, scaling et traitement numérique soignés</td></tr></tbody></table>
+        <div class="grid">
+          <article class="card"><h4>Single shooting</h4><div class="flow"><span class="node">u₀…uₙ₋₁</span><span class="arrow">→</span><span class="node">intégrateur ODE</span><span class="arrow">→</span><span class="node">x(t), J, g</span><span class="arrow">→</span><span class="node">SQP</span></div><p>Le cours mentionne SQP: évaluer coût/contraintes par intégration, calculer Jacobien/Hessien, résoudre un QP local puis faire une line search.</p></article>
+          <article class="card"><h4>Multiple shooting</h4><div class="formula small">\[x_{i+1}^{\text{opt}}-\Phi_i(x_i^{\text{opt}},u_i)=0\]</div><p>Chaque segment est un mini single-shooting. La différence est que son état initial est une variable d’optimisation, puis on impose la continuité entre segments.</p></article>
+        </div>
+        <div class="callout"><strong>Réponse à ta question précédente:</strong> oui, intuitivement le multiple shooting ressemble à plusieurs single shootings plus courts, mais avec une différence essentielle: les états aux jonctions sont eux-mêmes optimisés et reliés par des contraintes de continuité.</div>
+      </section>
+
+      <section id="flashcards" class="section">
+        <div class="section-title"><div class="num">12</div><div><h3>Flashcards</h3><p>Cliquer pour retourner la carte.</p></div></div>
+        <div class="flashcards">{flashcards.map(([cat,q,a]) => <div class="flashcard"><div class="flash-inner"><div class="face front"><small>{cat}</small><strong>{q}</strong><span>Voir la réponse →</span></div><div class="face back"><small>{cat}</small><strong>{a}</strong><span>← Retour</span></div></div></div>)}</div>
+      </section>
+
+      <section id="quiz" class="section">
+        <div class="section-title"><div class="num">13</div><div><h3>Quiz express</h3><p>8 questions pour vérifier les points les plus piégeux.</p></div></div>
+        <form id="quizForm">
+          <div class="quiz-q" data-answer="b"><p>1. Avec une commande contrainte, la condition générale de PMP est:</p><label><input type="radio" name="q1" value="a" /> ∂H/∂u = 0 dans tous les cas</label><label><input type="radio" name="q1" value="b" /> u* minimise H sur U</label><label><input type="radio" name="q1" value="c" /> H = 0 dans tous les cas</label></div>
+          <div class="quiz-q" data-answer="c"><p>2. Dans le LQR discret, la transformation qui mène à Riccati est:</p><label><input type="radio" name="q2" value="a" /> x=Pλ</label><label><input type="radio" name="q2" value="b" /> u=Px</label><label><input type="radio" name="q2" value="c" /> λ=Px</label></div>
+          <div class="quiz-q" data-answer="a"><p>3. En MPC, combien de mouvements optimisés sont réellement appliqués avant ré-optimisation ?</p><label><input type="radio" name="q3" value="a" /> Le premier uniquement</label><label><input type="radio" name="q3" value="b" /> Tout l’horizon de contrôle</label><label><input type="radio" name="q3" value="c" /> Aucun</label></div>
+          <div class="quiz-q" data-answer="b"><p>4. DMC est principalement basé sur:</p><label><input type="radio" name="q4" value="a" /> Une réponse fréquentielle</label><label><input type="radio" name="q4" value="b" /> Une réponse indicielle tronquée</label><label><input type="radio" name="q4" value="c" /> Un modèle neural</label></div>
+          <div class="quiz-q" data-answer="c"><p>5. QDMC devient nécessaire surtout pour:</p><label><input type="radio" name="q5" value="a" /> Éliminer le modèle</label><label><input type="radio" name="q5" value="b" /> Remplacer l’horizon glissant</label><label><input type="radio" name="q5" value="c" /> Intégrer explicitement des contraintes</label></div>
+          <div class="quiz-q" data-answer="a"><p>6. GPC utilise classiquement un modèle:</p><label><input type="radio" name="q6" value="a" /> CARIMA</label><label><input type="radio" name="q6" value="b" /> AR pur sans entrée</label><label><input type="radio" name="q6" value="c" /> PDE uniquement</label></div>
+          <div class="quiz-q" data-answer="b"><p>7. Le multiple shooting impose entre segments:</p><label><input type="radio" name="q7" value="a" /> Des discontinuités</label><label><input type="radio" name="q7" value="b" /> Des contraintes de continuité</label><label><input type="radio" name="q7" value="c" /> H=0 systématiquement</label></div>
+          <div class="quiz-q" data-answer="c"><p>8. La collocation se distingue principalement car:</p><label><input type="radio" name="q8" value="a" /> Elle ne discrétise jamais l’état</label><label><input type="radio" name="q8" value="b" /> Elle exige un système linéaire</label><label><input type="radio" name="q8" value="c" /> Elle n’utilise pas un intégrateur ODE séparé et approxime l’état sur des éléments</label></div>
+          <div class="quiz-actions"><button class="btn primary" type="submit">Corriger</button><button class="btn" id="resetQuiz" type="button">Réinitialiser</button><span id="quizResult" class="result"></span></div>
+        </form>
+        <p class="source-note">Contenu synthétisé à partir des notes manuscrites et des supports “Optimal Control — Part 1” et “Model Predictive Control — Part 2”.</p>
+      </section>
+      <div class="footer">Site statique Astro · progression conservée localement dans le navigateur.</div>
+    </div>
+  </main>
+</div>
+<script>
+const $=(s)=>document.querySelector(s), $$=(s)=>[...document.querySelectorAll(s)];
+$$('.flashcard').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('flipped')));
+const search=$('#search'); search?.addEventListener('input',()=>{const q=search.value.toLowerCase().trim(); $$('.searchable').forEach(s=>s.classList.toggle('hidden',q && !s.innerText.toLowerCase().includes(q)));});
+const keys=[...document.querySelectorAll('.section')].map(s=>s.id);
+function updateProgress(){const done=keys.filter(k=>localStorage.getItem('oc:'+k)==='1').length;const p=Math.round(done/keys.length*100);$('#progressText').textContent=p+'%';$('#progressBar').style.width=p+'%';}
+const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting&&e.intersectionRatio>.35){localStorage.setItem('oc:'+e.target.id,'1');updateProgress();$$('[data-nav]').forEach(a=>a.classList.toggle('active',a.dataset.nav===e.target.id));}}),{threshold:[.35]});
+$$('.section').forEach(s=>obs.observe(s)); updateProgress();
+$('#quizForm')?.addEventListener('submit',e=>{e.preventDefault();let score=0;$$('.quiz-q').forEach(q=>{const sel=q.querySelector('input:checked');q.style.borderColor='var(--line)';if(sel&&sel.value===q.dataset.answer){score++;q.style.borderColor='var(--good)'}else q.style.borderColor='var(--bad)';});$('#quizResult').textContent=`${score}/8`;localStorage.setItem('oc:quiz','1');updateProgress();});
+$('#resetQuiz')?.addEventListener('click',()=>{$('#quizForm').reset();$$('.quiz-q').forEach(q=>q.style.borderColor='var(--line)');$('#quizResult').textContent='';});
+</script>
+</body>
+</html>
