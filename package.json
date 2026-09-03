@@ -4,8 +4,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/fix-latex.mjs",
     "dev": "astro dev",
+    "prebuild": "node scripts/fix-latex.mjs",
     "build": "astro build",
+    "prepreview": "node scripts/fix-latex.mjs",
     "preview": "astro preview"
   },
   "dependencies": {
